@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LEDL Performance Monitoring Dashboard</title>
+  <meta name="description" content="Real-time industrial performance monitoring dashboard for LEDL motors." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+  <!-- ===== HEADER ===== -->
+
+  <header class="app-header" id="appHeader">
+    <div class="header-left">
+      <div class="motor-selector">
+        <label for="motorSelect">Select:</label>
+        <select id="motorSelect">
+          <option value="motor1">Blower 1</option>
+          <option value="motor2">Motor 2</option>
+        </select>
+      </div>
+    </div>
+    <div class="header-center">
+      <h1>Predictive Maintenance Dashboard</h1>
+      <div class="header-datetime" id="dateTime">Loading...</div>
+    </div>
+    <div class="header-right">
+      <div class="mqtt-status" id="mqttStatus">
+        <span class="status-dot"></span>
+        <span id="mqttStatusText">Connecting...</span>
+      </div>
+      <div class="header-logo-container">
+        <img src="ledl.png?v=2" alt="LEDL Logo" class="header-logo-right" />
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== MAIN 3-COLUMN GRID ===== -->
+  <main class="dashboard-grid">
+
+    <!-- ========== LEFT PANEL ========== -->
+    <section class="panel left-panel">
+
+      <!-- Motor Info Card -->
+      <div class="card info-card" id="infoCard">
+        <div class="info-table">
+          <div class="info-row">
+            <span class="info-label">Motor Name</span>
+            <span class="info-value">Blower 1</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Motor Type</span>
+            <span class="info-value">3-Phase Induction</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Rated Power</span>
+            <span class="info-value">5.5 kW</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Rated Voltage</span>
+            <span class="info-value">415 V</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Power Factor</span>
+            <span class="info-value">0.78</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Rated Efficiency</span>
+            <span class="info-value">87.7% (IE2)</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Speed</span>
+            <span class="info-value">1420 RPM</span>
+          </div>
+          <div class="info-row clickable" id="rowNameplate" title="Click to view Name Plate Image">
+            <span class="info-label">Name Plate Image</span>
+            <span class="info-value badge-green">View Image</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Application Name</span>
+            <span class="info-value">Painting Booth</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">M/c Sr.No</span>
+            <span class="info-value">EQ 11</span>
+          </div>
+          <div class="info-row clickable" id="rowHistory" title="Click to view Maintenance History">
+            <span class="info-label">Preventive Maint History card</span>
+            <span class="info-value badge-yellow">AAAAA</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Preventive Maint Done</span>
+            <span class="info-value">17.06.2026</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Preventive Maint Next Due</span>
+            <span class="info-value">15.07.2026</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vibration Graph Card -->
+      <div class="card chart-card" id="vibCard">
+        <div class="chart-header">
+          <h2 class="card-title">Vibration Graph</h2>
+          <span class="unit-tag">mm/sec</span>
+          <div class="axis-legend">
+            <span class="legend-dot" style="--dot-color: #007bff;">X</span>
+            <span class="legend-dot" style="--dot-color: #00c853;">Y</span>
+            <span class="legend-dot" style="--dot-color: #ff9100;">Z</span>
+          </div>
+        </div>
+        <div class="filter-bar">
+          <span class="filter-label">Filter:</span>
+          <button class="filter-btn active" data-filter="day">Day's</button>
+          <button class="filter-btn" data-filter="month">Months</button>
+          <button class="filter-btn" data-filter="ytd">YTD</button>
+          <button class="filter-btn" data-filter="total">Total</button>
+        </div>
+        <div class="chart-area">
+          <canvas id="vibChart"></canvas>
+        </div>
+        <div class="alarm-footer clickable" id="btnVibAlarm">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          <span id="vibAlarmText">Set band for Vibration alarm</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== CENTER PANEL ========== -->
+    <section class="panel center-panel">
+
+      <!-- Power Consumed Log -->
+      <div class="card power-card" id="powerCard">
+        <h2 class="card-title">Power Consumed Log</h2>
+        <div class="power-grid">
+          <div class="power-kpi kpi-energy">
+            <span class="power-kpi-label">Energy (kWh)</span>
+            <span class="power-kpi-value" id="kpiEnergy">--</span>
+          </div>
+          <div class="power-kpi kpi-pf">
+            <span class="power-kpi-label">Power Factor</span>
+            <span class="power-kpi-value" id="kpiPF">--</span>
+          </div>
+          <div class="power-kpi kpi-voltage">
+            <span class="power-kpi-label">Voltage (V)</span>
+            <span class="power-kpi-value" id="kpiVoltage">--</span>
+          </div>
+          <div class="power-kpi kpi-current">
+            <span class="power-kpi-label">Current (A)</span>
+            <span class="power-kpi-value" id="kpiCurrent">--</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Temperature Graph Card -->
+      <div class="card chart-card" id="tempCard">
+        <div class="chart-header">
+          <h2 class="card-title">Temperature Graph</h2>
+          <div class="temp-type-toggle">
+            <button class="type-btn active">Body</button>
+            <span class="type-sep">/</span>
+            <button class="type-btn">Winding</button>
+          </div>
+        </div>
+        <div class="filter-bar">
+          <span class="filter-label">Filter:</span>
+          <button class="filter-btn active" data-filter="day">Day's</button>
+          <button class="filter-btn" data-filter="month">Months</button>
+          <button class="filter-btn" data-filter="ytd">YTD</button>
+          <button class="filter-btn" data-filter="total">Total</button>
+        </div>
+        <div class="chart-area">
+          <canvas id="tempChart"></canvas>
+        </div>
+        <div class="alarm-footer clickable" id="btnTempAlarm">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          <span id="tempAlarmText">Set band for Temperature alarm</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== RIGHT PANEL ========== -->
+    <section class="panel right-panel">
+      <div class="card stats-card" id="statsCard">
+        <h2 class="card-title">Run Hrs Log</h2>
+        <div class="run-hours-visuals vertical-donuts">
+
+          <div class="donut-container donut-day-bg">
+            <div class="donut-header">
+              <span class="donut-title">Day's Run</span>
+              <span class="donut-avg">Avg: <span id="rhAvgDay">--</span>/Day</span>
+            </div>
+            <div class="donut-chart-wrapper">
+              <canvas id="donutToday"></canvas>
+              <div class="donut-center-text">
+                <div class="donut-val" id="rhToday">--</div>
+                <div class="donut-lbl">Hrs</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="donut-container donut-month-bg">
+            <div class="donut-header">
+              <span class="donut-title">Month's Run</span>
+              <span class="donut-avg">Avg: <span id="rhAvgMonth">--</span>/Month</span>
+            </div>
+            <div class="donut-chart-wrapper">
+              <canvas id="donutMonth"></canvas>
+              <div class="donut-center-text">
+                <div class="donut-val" id="rhMonth">--</div>
+                <div class="donut-lbl">Hrs</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="donut-container donut-ytd-bg">
+            <div class="donut-header">
+              <span class="donut-title">YTD Run</span>
+              <span class="donut-avg">Avg: <span id="rhAvgYTD">--</span>/YTD</span>
+            </div>
+            <div class="donut-chart-wrapper">
+              <canvas id="donutYTD"></canvas>
+              <div class="donut-center-text">
+                <div class="donut-val" id="rhYTD">--</div>
+                <div class="donut-lbl">Hrs</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="run-bar-group total-group">
+            <span class="total-lbl">Total Running</span>
+            <span class="total-val"><span id="rhTotal">--</span> Hrs</span>
+          </div>
+
+          <!-- Elicius Branding -->
+          <div class="right-panel-branding">
+            <span>Powered by Elicius Energy</span>
+            <img src="elicius_logo.png?v=2" alt="Elicius Energy Logo" class="footer-logo" />
+            <a href="https://www.eliciusenergy.in" target="_blank" class="footer-link">www.eliciusenergy.in</a>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== ALARM SETTINGS MODAL ===== -->
+  <div class="modal-overlay" id="alarmModal">
+    <div class="modal-body alarm-modal-body">
+      <button class="modal-close" id="alarmModalClose">&times;</button>
+      <h3 class="modal-title" id="alarmModalTitle">Set Alarm Threshold</h3>
+
+      <div class="alarm-input-group">
+        <label for="alarmThresholdInput" id="alarmInputLabel">Max Threshold:</label>
+        <div class="alarm-input-wrapper">
+          <input type="number" id="alarmThresholdInput" step="0.1" placeholder="e.g. 15.0" />
+          <span class="alarm-input-unit" id="alarmInputUnit">mm/sec</span>
+        </div>
+      </div>
+
+      <div class="alarm-modal-actions">
+        <button class="btn-primary" id="btnSaveAlarm">Save Alarm</button>
+        <button class="btn-secondary" id="btnClearAlarm">Clear Alarm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TOAST ALERTS ===== -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- ===== IMAGE MODAL ===== -->
+  <div class="modal-overlay" id="imageModal">
+    <div class="modal-body">
+      <button class="modal-close" id="modalClose">&times;</button>
+      <h3 class="modal-title" id="modalTitle"></h3>
+      <img id="modalImage" src="" alt="" class="modal-img" />
+    </div>
+  </div>
+
+
+
+  <script src="app.js"></script>
+</body>
+
+</html>
