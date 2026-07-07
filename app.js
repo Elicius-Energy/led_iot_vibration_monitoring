@@ -9,8 +9,9 @@
  *   - WebSocket broadcast for real-time updates
  */
 
-const BRIDGE_URL = 'http://localhost:8080';
-const WS_URL = 'ws://localhost:8080';
+const hostname = window.location.hostname;
+const BRIDGE_URL = `http://${hostname}:8080`;
+const WS_URL = `ws://${hostname}:8080`;
 
 document.addEventListener('DOMContentLoaded', () => {
   initClock();
