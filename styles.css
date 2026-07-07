@@ -520,7 +520,7 @@ body {
   color: var(--text-mid);
 }
 .footer-logo {
-  height: 32px;
+  height: 64px;
   object-fit: contain;
 }
 .footer-link {
