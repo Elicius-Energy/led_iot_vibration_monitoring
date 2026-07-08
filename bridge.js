@@ -114,7 +114,7 @@ const server = http.createServer((req, res) => {
       // Average by minute for today only
       query = `
         SELECT 
-          strftime('%H:%M', timestamp) as label,
+          strftime('%Y-%m-%dT%H:%M:%SZ', timestamp) as raw_timestamp,
           AVG(ax) as ax, AVG(ay) as ay, AVG(az) as az, AVG(temp) as temp
         FROM blynk_data
         WHERE date(timestamp) = date('now', 'localtime')
@@ -259,12 +259,7 @@ vibMqttClient.on('message', (topic, message) => {
         insertBlynk.run({ ax, ay, az, temp });
 
         // Broadcast to frontend
-        const now = new Date();
-        const hh = String(now.getHours()).padStart(2, '0');
-        const mm = String(now.getMinutes()).padStart(2, '0');
-        const ss = String(now.getSeconds()).padStart(2, '0');
-        const timeLabel = `${hh}:${mm}:${ss}`;
-        broadcast({ type: 'blynk', data: { ax, ay, az, temp, label: timeLabel } });
+        broadcast({ type: 'blynk', data: { ax, ay, az, temp, timestamp: new Date().toISOString() } });
 
         console.log(`[Vib-MQTT] NEW: ax=${ax} ay=${ay} az=${az} temp=${temp}`);
       }

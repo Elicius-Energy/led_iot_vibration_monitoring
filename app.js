@@ -195,7 +195,8 @@ function initWebSocket() {
           processElectricalData(msg.data);
         }
         else if (msg.type === 'blynk') {
-          const label = msg.data.label || new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          const d = new Date(msg.data.timestamp);
+          const label = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
           if (activeFilters.vib === 'day') pushChartData(vibChartInstance, label, [msg.data.ax, msg.data.ay, msg.data.az]);
           if (activeFilters.temp === 'day') pushChartData(tempChartInstance, label, [msg.data.temp]);
           checkAlarms(msg.data);
@@ -501,7 +502,10 @@ async function fetchFilteredChartData(chartType, filter) {
       
       data.forEach(row => {
         let label = row.label;
-        if (filter === 'day' && label && label.includes(' ')) {
+        if (filter === 'day' && row.raw_timestamp) {
+          const d = new Date(row.raw_timestamp);
+          label = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+        } else if (filter === 'day' && label && label.includes(' ')) {
           label = label.split(' ')[1];
         }
         labels.push(label);
