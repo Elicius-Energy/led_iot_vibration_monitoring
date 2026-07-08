@@ -111,15 +111,15 @@ const server = http.createServer((req, res) => {
     let query = '';
     
     if (filter === 'day') {
-      // Average by minute for the last 24 hours
+      // Average by minute for today only
       query = `
         SELECT 
-          strftime('%Y-%m-%d %H:%M', timestamp) as label,
+          strftime('%H:%M', timestamp) as label,
           AVG(ax) as ax, AVG(ay) as ay, AVG(az) as az, AVG(temp) as temp
         FROM blynk_data
-        WHERE timestamp >= datetime('now', '-1 day', 'localtime')
-        GROUP BY label
-        ORDER BY label ASC
+        WHERE date(timestamp) = date('now', 'localtime')
+        GROUP BY strftime('%Y-%m-%d %H:%M', timestamp)
+        ORDER BY timestamp ASC
       `;
     } else if (filter === 'month') {
       // Average by day for the last 30 days
@@ -259,7 +259,12 @@ vibMqttClient.on('message', (topic, message) => {
         insertBlynk.run({ ax, ay, az, temp });
 
         // Broadcast to frontend
-        broadcast({ type: 'blynk', data: { ax, ay, az, temp, timestamp: new Date().toISOString() } });
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        const ss = String(now.getSeconds()).padStart(2, '0');
+        const timeLabel = `${hh}:${mm}:${ss}`;
+        broadcast({ type: 'blynk', data: { ax, ay, az, temp, label: timeLabel } });
 
         console.log(`[Vib-MQTT] NEW: ax=${ax} ay=${ay} az=${az} temp=${temp}`);
       }

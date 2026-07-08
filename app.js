@@ -195,7 +195,7 @@ function initWebSocket() {
           processElectricalData(msg.data);
         }
         else if (msg.type === 'blynk') {
-          const label = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          const label = msg.data.label || new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
           if (activeFilters.vib === 'day') pushChartData(vibChartInstance, label, [msg.data.ax, msg.data.ay, msg.data.az]);
           if (activeFilters.temp === 'day') pushChartData(tempChartInstance, label, [msg.data.temp]);
           checkAlarms(msg.data);
