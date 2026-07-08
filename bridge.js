@@ -7,10 +7,9 @@ const path = require('path');
 // ==================== CONFIG ====================
 const MQTT_BROKER = 'mqtt://node.kaatru.org:1883';
 const MQTT_TOPIC = 'ledl';
-const BLYNK_TOKEN = 'XNzafq7GjeKYsZo205QKAFEja4YU-xAo';
-const BLYNK_URL = `https://blynk.cloud/external/api/get?token=${BLYNK_TOKEN}`;
+const VIB_MQTT_BROKER = 'mqtt://3.104.55.137:1884';
+const VIB_MQTT_TOPIC = 'ledl';
 const PORT = 8080;
-const BLYNK_POLL_INTERVAL = 900000; // 15 minutes (900000 ms)
 
 // ==================== DATABASE ====================
 const dbPath = path.join(__dirname, 'dashboard.db');
@@ -224,42 +223,51 @@ mqttClient.on('message', (topic, message) => {
   }
 });
 
-// ==================== BLYNK POLLER ====================
-let prevBlynk = { ax: null, ay: null, az: null, temp: null };
+// ==================== VIBRATION MQTT ====================
+const vibMqttClient = mqtt.connect(VIB_MQTT_BROKER, {
+  username: 'admin',
+  password: 'ledl'
+});
 
-async function pollBlynk() {
+vibMqttClient.on('connect', () => {
+  console.log(`[Vib-MQTT] Connected to ${VIB_MQTT_BROKER}`);
+  vibMqttClient.subscribe(VIB_MQTT_TOPIC, (err) => {
+    if (!err) console.log(`[Vib-MQTT] Subscribed to: ${VIB_MQTT_TOPIC}`);
+    else console.error('[Vib-MQTT] Subscribe error:', err);
+  });
+});
+
+vibMqttClient.on('error', (err) => console.error('[Vib-MQTT] Error:', err));
+
+let prevVib = { ax: null, ay: null, az: null, temp: null };
+
+vibMqttClient.on('message', (topic, message) => {
+  if (topic !== VIB_MQTT_TOPIC) return;
   try {
-    const [r0, r1, r2, r3] = await Promise.all([
-      fetch(`${BLYNK_URL}&V0`), fetch(`${BLYNK_URL}&V1`),
-      fetch(`${BLYNK_URL}&V2`), fetch(`${BLYNK_URL}&V3`)
-    ]);
-    const [axRaw, ayRaw, azRaw, tempRaw] = await Promise.all([r0.text(), r1.text(), r2.text(), r3.text()]);
+    const d = JSON.parse(message.toString());
+    
+    if (d.X !== undefined && d.Y !== undefined && d.Z !== undefined && d.Temperature !== undefined) {
+      const ax = parseFloat(d.X) || 0;
+      const ay = parseFloat(d.Y) || 0;
+      const az = parseFloat(d.Z) || 0;
+      const temp = parseFloat(d.Temperature) || 0;
 
-    const ax   = parseFloat(axRaw)   || 0;
-    const ay   = parseFloat(ayRaw)   || 0;
-    const az   = parseFloat(azRaw)   || 0;
-    const temp = parseFloat(tempRaw) || 0;
+      if (ax !== prevVib.ax || ay !== prevVib.ay || az !== prevVib.az || temp !== prevVib.temp) {
+        prevVib = { ax, ay, az, temp };
 
-    // Only store & broadcast if data actually changed
-    if (ax !== prevBlynk.ax || ay !== prevBlynk.ay || az !== prevBlynk.az || temp !== prevBlynk.temp) {
-      prevBlynk = { ax, ay, az, temp };
+        // Store in DB
+        insertBlynk.run({ ax, ay, az, temp });
 
-      // Store in DB
-      insertBlynk.run({ ax, ay, az, temp });
+        // Broadcast to frontend
+        broadcast({ type: 'blynk', data: { ax, ay, az, temp, timestamp: new Date().toISOString() } });
 
-      // Broadcast to frontend
-      broadcast({ type: 'blynk', data: { ax, ay, az, temp, timestamp: new Date().toISOString() } });
-
-      console.log(`[Blynk] NEW: ax=${ax} ay=${ay} az=${az} temp=${temp}`);
+        console.log(`[Vib-MQTT] NEW: ax=${ax} ay=${ay} az=${az} temp=${temp}`);
+      }
     }
   } catch (e) {
-    console.error('[Blynk] Poll error:', e);
+    console.error('[Vib-MQTT] Parse error:', e);
   }
-}
-
-// Start polling
-pollBlynk();
-setInterval(pollBlynk, BLYNK_POLL_INTERVAL);
+});
 
 // Graceful shutdown
 process.on('SIGINT', () => {
